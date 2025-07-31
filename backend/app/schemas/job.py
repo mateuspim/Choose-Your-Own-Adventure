@@ -12,7 +12,7 @@ class StoryJobResponse(BaseModel):
     status: str
     created_at: datetime
     story_id: Optional[int] = None
-    completed_ad: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
     error: Optional[str] = None
 
     class Config:

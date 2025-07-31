@@ -14,7 +14,7 @@ class StoryJob(Base):
     status: str = Column(String)
     story_id: int | None = Column(Integer, nullable=True)
     error: str | None = Column(String, nullable=True)
-    created_at: DateTime = Column(DateTime(timezone=True), server_default=func.now)
+    created_at: DateTime = Column(DateTime(timezone=True), server_default=func.now())
     completed_at: DateTime | None = Column(
         DateTime(timezone=True),
         nullable=True,

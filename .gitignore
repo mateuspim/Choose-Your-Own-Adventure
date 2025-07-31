@@ -35,3 +35,6 @@ frontend/.vite/
 .idea/
 *.swp
 *.swo
+
+# Database
+/backend/*.db

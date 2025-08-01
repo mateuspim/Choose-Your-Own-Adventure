@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     OPENAI_API_KEY: str
     OLLAMA_API_URL: str
+    OLLAMA_API_MODEL: str
 
     @field_validator("ALLOWED_ORIGINS")
     def parse_allowed_origins(cls, v: str) -> List[str]:

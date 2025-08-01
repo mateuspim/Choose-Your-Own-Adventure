@@ -13,6 +13,7 @@ from schemas.story import (
     CreateStoryRequest,
 )
 from schemas.job import StoryJobResponse
+from core.story_generator import StoryGenerator
 
 router = APIRouter(
     prefix="/stories",
@@ -41,10 +42,7 @@ def create_story(
     job_id = str(uuid.uuid4())
 
     job = StoryJob(
-        job_id=job_id, 
-        session_id=session_id, 
-        theme=request.theme, 
-        status="pending"
+        job_id=job_id, session_id=session_id, theme=request.theme, status="pending"
     )
 
     db.add(job)
@@ -70,9 +68,11 @@ def generate_story_task(job_id: str, theme: str, session_id: str):
             job.status = "processing"
             db.commit()
 
-            story = {}  # TODO: Generate Story
+            story = StoryGenerator.generate_story(
+                db=db, session_id=session_id, theme=theme
+            )
 
-            job.story_id = 1  # TODO: Update Story ID
+            job.story_id = story.id
             job.status = "completed"
             job.completed_at = datetime.now()
             db.commit()
@@ -88,14 +88,38 @@ def generate_story_task(job_id: str, theme: str, session_id: str):
 @router.get("/{story_id}/complete", response_model=CompleteStoryResponse)
 def get_complete_story(story_id: int, db: Session = Depends(get_db)):
     story = db.query(Story).filter(Story.id == story_id).first()
-
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
-
-    complete_story = build_complete_story_tree(db, story)
-
+    try:
+        complete_story = build_complete_story_tree(db, story)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to build story tree")
     return complete_story
 
 
 def build_complete_story_tree(db: Session, story: Story) -> CompleteStoryResponse:
-    pass
+    nodes = db.query(StoryNode).filter(StoryNode.story_id == story.id).all()
+
+    node_dict = {}
+    for node in nodes:
+        node_response = CompleteStoryNodeResponse(
+            id=node.id,
+            content=node.content,
+            is_ending=node.is_ending,
+            is_winning_ending=node.is_winning_ending,
+            options=node.options,
+        )
+        node_dict[node.id] = node_response
+
+    root_node = next((node for node in nodes if node.is_root), None)
+    if not root_node:
+        raise HTTPException(status_code=500, detail="Story root node not found")
+
+    return CompleteStoryResponse(
+        id=story.id,
+        title=story.title,
+        session_id=story.session_id,
+        created_at=story.created_at,
+        root_node=node_dict[root_node.id],
+        all_nodes=node_dict,
+    )
